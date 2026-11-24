@@ -1,0 +1,10 @@
+name = "elite-occu-gateway"
+compatibility_date = "2025-02-01"
+pages_build_output_dir = "dist"
+
+[vars]
+PRIMARY_URL = "https://elite-occu.vercel.app"
+MIRROR_URL = ""
+PROBE_PATH = "/api/ping"
+CACHE_TTL_SECONDS = "25"
+PROBE_TIMEOUT_MS = "4500"
