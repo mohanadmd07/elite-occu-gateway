@@ -18,6 +18,7 @@ let themeMode: ThemeMode = readStoredThemeMode();
 let { isDark, solar } = applyThemeToDom(themeMode);
 let autoRedirectEnabled = shouldAutoRedirect(window.location.search);
 let redirectTimer: number | null = null;
+let redirectCountdownTimer: number | null = null;
 let cooldownTimer: number | null = null;
 
 const state: RenderState = {
@@ -27,21 +28,34 @@ const state: RenderState = {
   themeMode,
   isDark,
   recheckCooldownSec: 0,
+  redirectCountdownSec: 0,
   isChecking: true,
   errorMessage: null,
 };
 
-function clearRedirectTimer(): void {
+function clearRedirectTimers(): void {
   if (redirectTimer !== null) {
     window.clearTimeout(redirectTimer);
     redirectTimer = null;
   }
+  if (redirectCountdownTimer !== null) {
+    window.clearInterval(redirectCountdownTimer);
+    redirectCountdownTimer = null;
+  }
+  state.redirectCountdownSec = 0;
 }
 
 function navigateToWorkspace(url: string): void {
-  clearRedirectTimer();
+  clearRedirectTimers();
   markRedirectTimestamp();
   window.location.replace(url);
+}
+
+function pauseAutoRedirect(): void {
+  autoRedirectEnabled = false;
+  clearRedirectTimers();
+  state.phase = state.verdict?.activeTarget ? 'paused' : state.phase;
+  paint();
 }
 
 function startCooldown(seconds: number): void {
@@ -59,14 +73,31 @@ function startCooldown(seconds: number): void {
   }, 1000);
 }
 
+function startRedirectCountdown(targetUrl: string, delayMs: number): void {
+  clearRedirectTimers();
+  if (delayMs >= 1000) {
+    state.redirectCountdownSec = Math.ceil(delayMs / 1000);
+    paint();
+    redirectCountdownTimer = window.setInterval(() => {
+      state.redirectCountdownSec = Math.max(0, state.redirectCountdownSec - 1);
+      if (state.redirectCountdownSec === 0 && redirectCountdownTimer !== null) {
+        window.clearInterval(redirectCountdownTimer);
+        redirectCountdownTimer = null;
+      }
+      paint();
+    }, 1000);
+  }
+
+  redirectTimer = window.setTimeout(() => {
+    if (autoRedirectEnabled) {
+      navigateToWorkspace(targetUrl);
+    }
+  }, delayMs);
+}
+
 function paint(): void {
   renderGateway(appRoot, state, {
-    onStayHere: () => {
-      autoRedirectEnabled = false;
-      clearRedirectTimer();
-      state.phase = state.verdict?.activeTarget ? 'paused' : state.phase;
-      paint();
-    },
+    onStayHere: pauseAutoRedirect,
     onRecheck: () => {
       if (state.isChecking || state.recheckCooldownSec > 0) return;
       void runCheck(true);
@@ -88,7 +119,7 @@ function paint(): void {
 }
 
 async function runCheck(isManual: boolean): Promise<void> {
-  clearRedirectTimer();
+  clearRedirectTimers();
   state.isChecking = true;
   state.errorMessage = null;
   if (!isManual) {
@@ -99,7 +130,7 @@ async function runCheck(isManual: boolean): Promise<void> {
   if (typeof navigator !== 'undefined' && navigator.onLine === false) {
     state.isChecking = false;
     state.phase = 'offline';
-    state.errorMessage = 'Your device is currently offline.';
+    state.errorMessage = 'No network connection detected.';
     paint();
     return;
   }
@@ -122,11 +153,7 @@ async function runCheck(isManual: boolean): Promise<void> {
       resolution.targetUrl &&
       (resolution.phase === 'redirecting_primary' || resolution.phase === 'redirecting_mirror')
     ) {
-      redirectTimer = window.setTimeout(() => {
-        if (autoRedirectEnabled && resolution.targetUrl) {
-          navigateToWorkspace(resolution.targetUrl);
-        }
-      }, resolution.delayMs);
+      startRedirectCountdown(resolution.targetUrl, resolution.delayMs);
     }
   } catch (err: unknown) {
     state.isChecking = false;
@@ -146,6 +173,15 @@ window.setInterval(() => {
   paint();
 }, 30_000);
 
+window.addEventListener('keydown', (event: KeyboardEvent) => {
+  if (
+    event.key === 'Escape' &&
+    (state.phase === 'checking' || state.phase === 'redirecting_primary' || state.phase === 'redirecting_mirror')
+  ) {
+    pauseAutoRedirect();
+  }
+});
+
 window.addEventListener('online', () => {
   if (state.phase === 'offline') {
     void runCheck(true);
@@ -153,7 +189,7 @@ window.addEventListener('online', () => {
 });
 
 window.addEventListener('offline', () => {
-  clearRedirectTimer();
+  clearRedirectTimers();
   state.phase = 'offline';
   state.errorMessage = 'Network connection lost.';
   paint();

@@ -3,6 +3,7 @@ import { getCairoSolarSnapshot, SolarSnapshot } from './solar';
 export type ThemeMode = 'auto' | 'light' | 'dark';
 
 const STORAGE_KEY = 'elite_hospital_theme_mode';
+const AUTO_DARK_CACHE_KEY = 'elite_hospital_theme_auto_dark';
 
 export function readStoredThemeMode(): ThemeMode {
   try {
@@ -34,6 +35,12 @@ export function applyThemeToDom(mode: ThemeMode, now: Date = new Date()): { isDa
   const isDark = resolveIsDark(mode, solar);
   const root = document.documentElement;
   const body = document.body;
+
+  try {
+    localStorage.setItem(AUTO_DARK_CACHE_KEY, solar.isDaytime ? '0' : '1');
+  } catch {
+    // Ignore storage errors
+  }
 
   if (isDark) {
     root.classList.add('dark');

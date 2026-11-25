@@ -23,13 +23,18 @@
           if (mode === 'dark') {
             isDark = true;
           } else if (mode === 'auto') {
-            var parts = new Intl.DateTimeFormat('en-US', {
-              hour: 'numeric',
-              hour12: false,
-              timeZone: 'Africa/Cairo',
-            }).format(new Date());
-            var h = Number(parts) % 24;
-            isDark = h >= 18 || h < 6;
+            var cachedAuto = localStorage.getItem('elite_hospital_theme_auto_dark');
+            if (cachedAuto === '1' || cachedAuto === '0') {
+              isDark = cachedAuto === '1';
+            } else {
+              var parts = new Intl.DateTimeFormat('en-US', {
+                hour: 'numeric',
+                hour12: false,
+                timeZone: 'Africa/Cairo',
+              }).format(new Date());
+              var h = Number(parts) % 24;
+              isDark = h >= 18 || h < 6;
+            }
           }
           if (isDark) {
             document.documentElement.classList.add('dark');
@@ -41,7 +46,6 @@
     </script>
   </head>
   <body>
-    <div class="ambient-veil" aria-hidden="true"></div>
     <main id="app" class="gateway-shell"></main>
     <script type="module" src="/src/main.ts"></script>
   </body>
