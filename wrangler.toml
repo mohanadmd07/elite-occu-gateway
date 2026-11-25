@@ -4,7 +4,7 @@ pages_build_output_dir = "dist"
 
 [vars]
 PRIMARY_URL = "https://elite-occu.vercel.app"
-MIRROR_URL = ""
+MIRROR_URL = "https://elite-occu-mirror.vercel.app"
 PROBE_PATH = "/api/ping"
 CACHE_TTL_SECONDS = "25"
 PROBE_TIMEOUT_MS = "4500"
