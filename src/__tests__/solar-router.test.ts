@@ -64,7 +64,7 @@ describe('resolvePhaseFromCheck', () => {
     const res = resolvePhaseFromCheck(baseVerdict(false, true), true);
     expect(res.phase).toBe('redirecting_mirror');
     expect(res.targetUrl).toBe('https://mirror.example');
-    expect(res.delayMs).toBe(1100);
+    expect(res.delayMs).toBe(6000);
   });
 
   it('stays paused when auto-redirect is disabled', () => {

@@ -56,7 +56,7 @@ export function resolvePhaseFromCheck(
     return {
       phase: autoRedirectEnabled ? 'redirecting_mirror' : 'paused',
       targetUrl: verdict.mirror.url,
-      delayMs: 1100,
+      delayMs: 6000,
     };
   }
 
